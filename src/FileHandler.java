@@ -179,8 +179,8 @@ public class FileHandler {
                         edgeIndex += graf.wezly[i].liczbaWezlowPowiazanych + 1;
                     }
                 }
-                writer.print(edgeIndex); // <--- najważniejsze!
-                // NIE dodawaj writer.println() na końcu!
+                writer.print(edgeIndex);
+
             }
             System.out.printf("Graf został zapisany do pliku %s.\n", nazwaPliku);
         } catch (IOException e) {
@@ -188,20 +188,17 @@ public class FileHandler {
         }
     }
 
-    // Zapis grafu w formacie binarnym (każda liczba jako int, wartości po kolei)
+
     public static void zapiszGrafBinarnie(String nazwaPliku, Graph graf, int liczbaPodzialow, int[] przypisania) {
         try (DataOutputStream out = new DataOutputStream(new FileOutputStream(nazwaPliku))) {
             System.out.printf("Zapisuje graf w formacie binarnym do pliku %s.\n", nazwaPliku);
 
-            // 1. Liczba kolumn
             out.writeInt(graf.liczbaKolumn);
 
-            // 2. Indeksy kolumn węzłów
             for (int i = 0; i < graf.liczbaWezlow; i++) {
                 out.writeInt(graf.wezly[i].kolumna);
             }
 
-            // 3. Wskaźniki na pierwsze indeksy wierszy w liście (bufor2)
             int previousIndex = 0;
             int currentIndex = 0;
             for (int i = 0; i < graf.liczbaWierszy; i++) {
