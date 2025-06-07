@@ -2,15 +2,19 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.util.ArrayList;
 
 public class MainWindow extends JFrame {
     private GraphView graphView;
     private Graph graph;
     private JTextField marginField;
-    private JComboBox<Integer> partitionsCombo;
+    private JTextField partsField; // zamiast ComboBox
     private JTextArea statusArea;
-    private int[] przypisania; // przypisania węzłów do partycji
+    private int[] przypisania;
     private int liczbaPodzialow = 2;
+    private JPanel subgraphButtonsPanel;
+    private ArrayList<JButton> subgraphButtons = new ArrayList<>();
+    private JButton showAllButton, showColoredButton;
 
     public MainWindow() {
         setTitle("Podział grafu");
@@ -18,19 +22,19 @@ public class MainWindow extends JFrame {
         setLayout(new BorderLayout(10, 10));
         getContentPane().setBackground(new Color(255, 240, 245));
 
-        // Obszar rysowania grafu
+
         graphView = new GraphView(null);
         graphView.setBorder(BorderFactory.createTitledBorder("Miejsce na rysunek grafu"));
         graphView.setBackground(new Color(255, 245, 250));
         add(graphView, BorderLayout.CENTER);
 
-        // Panel boczny
+
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
         sidePanel.setBackground(new Color(252, 232, 239));
         sidePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Panel wyboru grafu do podziału
+
         JPanel graphSelectPanel = new JPanel();
         graphSelectPanel.setLayout(new BoxLayout(graphSelectPanel, BoxLayout.Y_AXIS));
         graphSelectPanel.setBackground(new Color(252, 232, 239));
@@ -39,31 +43,15 @@ public class MainWindow extends JFrame {
         JButton openGraphBtn = new JButton("Wczytaj graf...");
         openGraphBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         openGraphBtn.addActionListener(e -> loadGraph());
-
         graphSelectPanel.add(openGraphBtn);
         graphSelectPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Lista przykładowych grafów (możesz dodać własne pliki)
-        JRadioButton part1 = new JRadioButton("graf 1");
-        JRadioButton part2 = new JRadioButton("graf 2");
-        JRadioButton part3 = new JRadioButton("graf 3");
-        part1.setBackground(new Color(252, 232, 239));
-        part2.setBackground(new Color(252, 232, 239));
-        part3.setBackground(new Color(252, 232, 239));
-        ButtonGroup group = new ButtonGroup();
-        group.add(part1);
-        group.add(part2);
-        group.add(part3);
-        part1.setSelected(true);
 
-        graphSelectPanel.add(part1);
-        graphSelectPanel.add(part2);
-        graphSelectPanel.add(part3);
 
         sidePanel.add(graphSelectPanel);
         sidePanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Pole do ustawiania marginesu
+
         JPanel marginPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         marginPanel.setBackground(new Color(252, 232, 239));
         JLabel marginLabel = new JLabel("Margines:");
@@ -73,17 +61,17 @@ public class MainWindow extends JFrame {
 
         sidePanel.add(marginPanel);
 
-        // Pole do ustawiania liczby części podziału
+
         JPanel partitionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         partitionsPanel.setBackground(new Color(252, 232, 239));
         JLabel partitionsLabel = new JLabel("Liczba części:");
-        partitionsCombo = new JComboBox<>(new Integer[]{2, 3, 4, 5, 6});
+        partsField = new JTextField("2", 4);
         partitionsPanel.add(partitionsLabel);
-        partitionsPanel.add(partitionsCombo);
+        partitionsPanel.add(partsField);
 
         sidePanel.add(partitionsPanel);
 
-        // Przycisk "Rozpocznij podział!"
+
         JButton startBtn = new JButton("Rozpocznij podział!");
         startBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         startBtn.setBackground(new Color(234, 183, 202));
@@ -93,7 +81,15 @@ public class MainWindow extends JFrame {
         sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
         sidePanel.add(startBtn);
 
-        // Przycisk zapisu do pliku tekstowego
+
+        subgraphButtonsPanel = new JPanel();
+        subgraphButtonsPanel.setLayout(new BoxLayout(subgraphButtonsPanel, BoxLayout.Y_AXIS));
+        subgraphButtonsPanel.setBackground(new Color(252, 232, 239));
+        subgraphButtonsPanel.setBorder(BorderFactory.createTitledBorder("Podgrafy"));
+        sidePanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        sidePanel.add(subgraphButtonsPanel);
+
+
         JButton saveTxtBtn = new JButton("Zapisz do pliku tekstowego");
         saveTxtBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         saveTxtBtn.setBackground(new Color(200, 210, 244));
@@ -102,7 +98,7 @@ public class MainWindow extends JFrame {
         sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
         sidePanel.add(saveTxtBtn);
 
-        // Przycisk zapisu do pliku binarnego
+
         JButton saveBinBtn = new JButton("Zapisz do pliku binarnego");
         saveBinBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         saveBinBtn.setBackground(new Color(180, 200, 210));
@@ -111,7 +107,7 @@ public class MainWindow extends JFrame {
         sidePanel.add(Box.createRigidArea(new Dimension(0, 10)));
         sidePanel.add(saveBinBtn);
 
-        // Pole na komunikaty o błędach/sukcesie
+
         sidePanel.add(Box.createRigidArea(new Dimension(0, 20)));
         statusArea = new JTextArea(3, 18);
         statusArea.setEditable(false);
@@ -139,6 +135,7 @@ public class MainWindow extends JFrame {
             } else {
                 statusArea.setText("Błąd podczas wczytywania grafu.");
             }
+            clearSubgraphButtons();
         }
     }
 
@@ -154,22 +151,30 @@ public class MainWindow extends JFrame {
             statusArea.setText("Błędny margines!");
             return;
         }
-        liczbaPodzialow = (Integer) partitionsCombo.getSelectedItem();
-
-        // Przykład: partycjonujemy "na okrągło"
-        przypisania = new int[graph.liczbaWezlow];
-        for (int i = 0; i < graph.liczbaWezlow; i++) {
-            przypisania[i] = i % liczbaPodzialow;
+        try {
+            liczbaPodzialow = Integer.parseInt(partsField.getText().trim());
+            if (liczbaPodzialow < 1 || liczbaPodzialow > graph.liczbaWezlow) {
+                statusArea.setText("Nieprawidłowa liczba części.");
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            statusArea.setText("Błędna liczba części!");
+            return;
         }
 
-        // Jeśli masz swój algorytm partycjonowania, ustaw przypisania tutaj!
+        przypisania = new int[graph.liczbaWezlow];
+        for (int i = 0; i < graph.liczbaWezlow; i++) {
+         przypisania[i] = i % liczbaPodzialow;
+        }
+
 
         for (int i = 0; i < graph.liczbaWezlow; i++) {
             graph.wezly[i].numer = przypisania[i];
         }
 
         statusArea.setText("Podział wykonany.");
-        graphView.setGraph(graph); // odśwież rysunek
+        graphView.setGraphColored(graph, przypisania, liczbaPodzialow);
+        updateSubgraphButtons();
     }
 
     private void saveGraphToText() {
@@ -183,6 +188,9 @@ public class MainWindow extends JFrame {
         if (result != JFileChooser.APPROVE_OPTION) return;
 
         String path = chooser.getSelectedFile().getAbsolutePath();
+        if (!path.toLowerCase().endsWith(".txt")) {
+            path += ".txt";
+        }
         FileHandler.zapiszGraf(path, graph, liczbaPodzialow, przypisania);
         statusArea.setText("Zapisano graf do pliku tekstowego.");
     }
@@ -198,8 +206,70 @@ public class MainWindow extends JFrame {
         if (result != JFileChooser.APPROVE_OPTION) return;
 
         String path = chooser.getSelectedFile().getAbsolutePath();
+        if (!path.toLowerCase().endsWith(".bin")) {
+            path += ".bin";
+        }
         FileHandler.zapiszGrafBinarnie(path, graph, liczbaPodzialow, przypisania);
         statusArea.setText("Zapisano graf do pliku binarnego.");
+    }
+
+
+    private void clearSubgraphButtons() {
+        subgraphButtonsPanel.removeAll();
+        subgraphButtons.clear();
+        if (showAllButton != null) showAllButton.setEnabled(false);
+        if (showColoredButton != null) showColoredButton.setEnabled(false);
+        subgraphButtonsPanel.revalidate();
+        subgraphButtonsPanel.repaint();
+    }
+
+    private void updateSubgraphButtons() {
+        clearSubgraphButtons();
+        if (graph == null || przypisania == null) return;
+
+
+        showColoredButton = new JButton("Pokaż kolorowy graf główny");
+        showColoredButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        showColoredButton.setBackground(new Color(200, 230, 200));
+        showColoredButton.setFocusPainted(false);
+        showColoredButton.addActionListener(e -> {
+            graphView.setGraphColored(graph, przypisania, liczbaPodzialow);
+            statusArea.setText("Wyświetlono kolorowy graf główny.");
+        });
+        showColoredButton.setEnabled(true);
+        subgraphButtonsPanel.add(showColoredButton);
+        subgraphButtonsPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        showAllButton = new JButton("Pokaż cały graf");
+        showAllButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        showAllButton.setBackground(new Color(220, 220, 220));
+        showAllButton.setFocusPainted(false);
+        showAllButton.addActionListener(e -> {
+            graphView.setGraph(graph);
+            statusArea.setText("Wyświetlono cały graf.");
+        });
+        showAllButton.setEnabled(true);
+        subgraphButtonsPanel.add(showAllButton);
+        subgraphButtonsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+
+        for (int cz = 0; cz < liczbaPodzialow; cz++) {
+            final int part = cz;
+            JButton btn = new JButton("Pokaż część " + (cz + 1));
+            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setBackground(new Color(234, 183, 202));
+            btn.setFocusPainted(false);
+            btn.addActionListener(e -> {
+                Graph subgraph = SubgraphBuilder.buildSubgraph(graph, przypisania, part);
+                graphView.setGraph(subgraph);
+                statusArea.setText("Wyświetlono część " + (part + 1) + ".");
+            });
+            subgraphButtons.add(btn);
+            subgraphButtonsPanel.add(btn);
+            subgraphButtonsPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        }
+        subgraphButtonsPanel.revalidate();
+        subgraphButtonsPanel.repaint();
     }
 
     public static void main(String[] args) {

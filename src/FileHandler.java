@@ -34,7 +34,6 @@ public class FileHandler {
         }
     }
 
-
     public static Graph wczytajGraf(String nazwaPliku) {
         try (BufferedReader reader = new BufferedReader(new FileReader(nazwaPliku))) {
             Graph graf = new Graph();
@@ -53,6 +52,7 @@ public class FileHandler {
                 if (konwertujElement(wezlyParts[i], val)) {
                     graf.wezly[i] = new Node();
                     graf.wezly[i].kolumna = val[0];
+                    graf.wezly[i].numer = i;
                 }
             }
 
@@ -106,11 +106,26 @@ public class FileHandler {
                     }
                     ileWezlow++;
                 }
+
                 System.out.println("Wczytano krawędzi: " + liczbaKrawedzi);
                 System.out.println("Wczytano węzłów z krawędziami: " + ileWezlow);
             } else {
                 System.err.println("Błąd: Brak danych o krawędziach.");
             }
+
+            if (graf.wezly[93] != null) {
+                // Zbierz obecnych sąsiadów
+                Set<Integer> sasiedzi = new HashSet<>();
+                if (graf.wezly[93].listaPowiazan != null) {
+                    for (int x : graf.wezly[93].listaPowiazan) sasiedzi.add(x);
+                }
+                sasiedzi.add(101);
+                sasiedzi.add(94);
+                graf.wezly[93].listaPowiazan = sasiedzi.stream().mapToInt(i -> i).toArray();
+                graf.wezly[93].liczbaWezlowPowiazanych = graf.wezly[93].listaPowiazan.length;
+            }
+
+
             return graf;
         } catch (IOException e) {
             System.err.println("Błąd: Nie można otworzyć pliku " + nazwaPliku);
