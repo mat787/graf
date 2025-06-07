@@ -168,9 +168,9 @@ public class MainWindow extends JFrame {
         }
 
 
-        for (int i = 0; i < graph.liczbaWezlow; i++) {
-            graph.wezly[i].numer = przypisania[i];
-        }
+        //for (int i = 0; i < graph.liczbaWezlow; i++) {
+        //    graph.wezly[i].numer = przypisania[i];
+       // }
 
         statusArea.setText("Podział wykonany.");
         graphView.setGraphColored(graph, przypisania, liczbaPodzialow);
